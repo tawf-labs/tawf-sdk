@@ -1,0 +1,42 @@
+{
+  "name": "@tawf/bridge-relayer",
+  "version": "1.0.0",
+  "description": "Cross-chain message relay service for Tawf DID Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc -b",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "bridge",
+    "relayer",
+    "cross-chain",
+    "midnight",
+    "ethereum",
+    "solana"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@midnight-ntwrk/midnight-js": "^4.0.3",
+    "@solana/web3.js": "^1.87.0",
+    "@tawf/types": "workspace:*",
+    "ethers": "^6.9.0",
+    "eventemitter3": "^5.0.1",
+    "node-cron": "^3.0.3",
+    "pino": "^8.17.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/node-cron": "^3.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.8.0"
+  }
+}

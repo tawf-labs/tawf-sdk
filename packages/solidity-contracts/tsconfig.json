@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./",
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "baseUrl": ".",
+    "paths": {
+      "@tawf/types": ["../types/src"],
+      "@tawf/types/*": ["../types/src/*"]
+    }
+  },
+  "include": ["contracts/**/*.ts", "scripts/**/*.ts"],
+  "exclude": ["artifacts", "cache", "dist", "node_modules", "typechain-types", "test"],
+  "references": [
+    { "path": "../types" }
+  ]
+}

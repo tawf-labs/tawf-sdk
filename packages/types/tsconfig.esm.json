@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist/esm",
+    "tsBuildInfoFile": "./dist/esm/.tsbuildinfo",
+
+    // Declarations come from the CommonJS pass, which is what `exports.types`
+    // points at. Emitting them twice would only create two sources of truth.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

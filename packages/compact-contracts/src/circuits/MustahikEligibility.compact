@@ -1,0 +1,332 @@
+/**
+ * MustahikEligibility.compact - Zakat Eligibility Verification Circuit
+ *
+ * This zero-knowledge circuit allows mustahik (zakat recipients) to prove
+ * their eligibility for zakat without revealing their exact financial details.
+ *
+ * The circuit proves:
+ * 1. Net wealth (income + assets - debts) is below the nisab threshold
+ * 2. All financial values are non-negative
+ * 3. The proof is fresh (within 90 days)
+ *
+ * Privacy: The actual income, assets, and debts remain private
+ *
+ * @module MustahikEligibility
+ * @pragma language_version 0.20
+ */
+
+pragma language_version 0.20;
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/// Proof validity period in seconds (90 days)
+const PROOF_VALIDITY_PERIOD: Uint<64> = 90 * 24 * 60 * 60;
+
+/// Maximum family size supported
+const MAX_FAMILY_SIZE: Uint<8> = 50;
+
+/// Additional allowance per family member
+const FAMILY_ALLOWANCE_PER_MEMBER: Field = 1000000; // Scaled value
+
+/// Nisab calculation types
+enum NisabType {
+    /// Based on gold (approx. 85 grams)
+    GOLD = 0,
+    /// Based on silver (approx. 595 grams)
+    SILVER = 1,
+    /// Custom threshold
+    CUSTOM = 2
+}
+
+// ============================================================================
+// Structs
+// ============================================================================
+
+/// Mustahik Financial Data (Private)
+struct MustahikData {
+    /// Monthly or annual income
+    income: Field;
+    /// Total assets (property, savings, etc.)
+    assets: Field;
+    /// Total outstanding debts
+    debts: Field;
+    /// Number of dependents
+    familySize: Uint<8>;
+    /// Location for regional nisab adjustments
+    regionCode: Uint<16>;
+}
+
+/// Eligibility Proof Result
+struct EligibilityResult {
+    /// Whether eligible for zakat
+    isEligible: Bool;
+    /// Computed net wealth (hashed for privacy)
+    netWealthHash: Field;
+    /// Proof creation timestamp
+    timestamp: Uint<64>;
+    /// Expiration timestamp
+    expiresAt: Uint<64>;
+}
+
+/// Nisab Threshold Configuration
+struct NisabConfig {
+    /// Type of nisab calculation
+    nisabType: NisabType;
+    /// Base nisab threshold
+    baseThreshold: Field;
+    /// Regional adjustment factor (percentage as Field)
+    regionalAdjustment: Field,
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Calculate family size allowance
+/// @param familySize Number of family members
+/// @returns Additional allowance amount
+function calculateFamilyAllowance(familySize: Uint<8>) -> Field {
+    let members = cast<Field>(familySize);
+    return members * FAMILY_ALLOWANCE_PER_MEMBER;
+}
+
+/// Calculate effective nisab threshold
+/// @param config Nisab configuration
+/// @param familySize Family size for allowance
+/// @returns Effective threshold for eligibility
+function calculateEffectiveThreshold(config: NisabConfig, familySize: Uint<8>) -> Field {
+    let baseThreshold = config.baseThreshold;
+
+    // Apply regional adjustment
+    let adjustedThreshold = baseThreshold * config.regionalAdjustment / 10000;
+
+    // Add family allowance
+    let familyAllowance = calculateFamilyAllowance(familySize);
+
+    return adjustedThreshold + familyAllowance;
+}
+
+/// Compute hash of net wealth for commitment
+/// @param netWealth Computed net wealth
+/// @param timestamp Proof timestamp
+/// @returns Hash commitment
+function computeWealthHash(netWealth: Field, timestamp: Uint<64>) -> Field {
+    return hash<Poseidon>(netWealth, cast<Field>(timestamp));
+}
+
+/// Validate family size is within acceptable range
+/// @param familySize Family size to validate
+/// @returns true if valid
+function validateFamilySize(familySize: Uint<8>) -> Bool {
+    return familySize <= MAX_FAMILY_SIZE;
+}
+
+// ============================================================================
+// Main Circuit
+// ============================================================================
+
+/**
+ * Verify Mustahik eligibility for zakat
+ *
+ * This circuit proves that a mustahik's net wealth is below the nisab
+ * threshold without revealing the actual financial data.
+ *
+ * @param income Private: User's income
+ * @param assets Private: User's total assets
+ * @param debts Private: User's total debts
+ * @param familySize Private: Number of dependents
+ * @param nisabConfig Public: Nisab threshold configuration
+ * @param timestamp Public: Proof creation timestamp
+ * @returns Eligibility result with commitment
+ */
+export circuit verifyMustahikEligibility(
+    private income: Field,
+    private assets: Field,
+    private debts: Field,
+    private familySize: Uint<8>,
+    public nisabConfig: NisabConfig,
+    public timestamp: Uint<64>
+) -> EligibilityResult {
+    // Validate family size
+    require(validateFamilySize(familySize));
+
+    // Ensure all financial values are non-negative
+    require(income >= 0);
+    require(assets >= 0);
+    require(debts >= 0);
+
+    // Calculate net wealth
+    let netWealth = income + assets - debts;
+
+    // Calculate effective nisab threshold
+    let effectiveThreshold = calculateEffectiveThreshold(nisabConfig, familySize);
+
+    // Verify net wealth is below threshold (eligible for zakat)
+    let isEligible = netWealth < effectiveThreshold;
+    require(isEligible);
+
+    // Ensure non-negative net wealth
+    require(netWealth >= 0);
+
+    // Verify proof freshness (must be recent)
+    // Note: block.timestamp is the verification time
+    let proofExpiry = timestamp + PROOF_VALIDITY_PERIOD;
+    require(proofExpiry > block.timestamp);
+
+    // Compute wealth commitment for audit trail
+    let netWealthHash = computeWealthHash(netWealth, timestamp);
+
+    // Build result
+    let result = EligibilityResult {
+        isEligible: true,
+        netWealthHash: netWealthHash,
+        timestamp: timestamp,
+        expiresAt: proofExpiry
+    };
+
+    // Emit verification event
+    emit<EligibilityProven>(
+        netWealthHash,
+        effectiveThreshold,
+        timestamp,
+        proofExpiry
+    );
+
+    return result;
+}
+
+// ============================================================================
+// Simplified Circuit (for gas optimization)
+// ============================================================================
+
+/**
+ * Simplified eligibility check with pre-computed net wealth
+ *
+ * Use this when the caller has already computed net wealth
+ * and just needs to prove eligibility.
+ *
+ * @param netWealth Private: Pre-computed net wealth
+ * @param nisabThreshold Public: Nisab threshold to compare against
+ * @param timestamp Public: Proof creation timestamp
+ * @returns Hash commitment and expiration
+ */
+export circuit verifyEligibilitySimple(
+    private netWealth: Field,
+    public nisabThreshold: Field,
+    public timestamp: Uint<64>
+) -> Field {
+    // Ensure non-negative net wealth
+    require(netWealth >= 0);
+
+    // Verify net wealth is below threshold
+    require(netWealth < nisabThreshold);
+
+    // Verify proof freshness
+    let proofExpiry = timestamp + PROOF_VALIDITY_PERIOD;
+    require(proofExpiry > block.timestamp);
+
+    // Compute and return wealth commitment
+    let netWealthHash = computeWealthHash(netWealth, timestamp);
+
+    emit<SimpleEligibilityProven>(
+        netWealthHash,
+        nisabThreshold,
+        timestamp
+    );
+
+    return netWealthHash;
+}
+
+// ============================================================================
+// Batch Verification
+// ============================================================================
+
+/**
+ * Verify eligibility for multiple family members
+ *
+ * Used for household-based eligibility verification.
+ *
+ * @param householdData Array of mustahik data
+ * @param nisabConfig Public: Nisab configuration
+ * @param timestamp Public: Proof timestamp
+ * @returns Combined eligibility result
+ */
+export circuit verifyHouseholdEligibility(
+    private householdIncome: Field,
+    private householdAssets: Field,
+    private householdDebts: Field,
+    private householdSize: Uint<8>,
+    public nisabConfig: NisabConfig,
+    public timestamp: Uint<64>
+) -> EligibilityResult {
+    // Validate household size
+    require(householdSize > 0);
+    require(householdSize <= MAX_FAMILY_SIZE);
+
+    // Ensure non-negative values
+    require(householdIncome >= 0);
+    require(householdAssets >= 0);
+    require(householdDebts >= 0);
+
+    // Calculate household net wealth
+    let netWealth = householdIncome + householdAssets - householdDebts;
+    require(netWealth >= 0);
+
+    // Calculate household-specific threshold
+    let effectiveThreshold = calculateEffectiveThreshold(nisabConfig, householdSize);
+
+    // Verify eligibility
+    require(netWealth < effectiveThreshold);
+
+    // Verify freshness
+    let proofExpiry = timestamp + PROOF_VALIDITY_PERIOD;
+    require(proofExpiry > block.timestamp);
+
+    // Compute commitment
+    let netWealthHash = computeWealthHash(netWealth, timestamp);
+
+    let result = EligibilityResult {
+        isEligible: true,
+        netWealthHash: netWealthHash,
+        timestamp: timestamp,
+        expiresAt: proofExpiry
+    };
+
+    emit<HouseholdEligibilityProven>(
+        netWealthHash,
+        householdSize,
+        effectiveThreshold,
+        timestamp
+    );
+
+    return result;
+}
+
+// ============================================================================
+// Events
+// ============================================================================
+
+/// Emitted when full eligibility is proven
+event EligibilityProven(
+    netWealthHash: Field,
+    effectiveThreshold: Field,
+    timestamp: Uint<64>,
+    expiresAt: Uint<64>
+);
+
+/// Emitted when simplified eligibility is proven
+event SimpleEligibilityProven(
+    netWealthHash: Field,
+    nisabThreshold: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when household eligibility is proven
+event HouseholdEligibilityProven(
+    netWealthHash: Field,
+    householdSize: Uint<8>,
+    effectiveThreshold: Field,
+    timestamp: Uint<64>
+);

@@ -1,0 +1,476 @@
+/**
+ * CreditRange.compact - Credit Range Proof Circuit for tawf.finance
+ *
+ * This zero-knowledge circuit allows users to prove their creditworthiness
+ * for Islamic finance products without revealing their exact financial data.
+ *
+ * The circuit proves:
+ * 1. Credit score falls within an acceptable range
+ * 2. Debt-to-income ratio is within Sharia-compliant limits
+ * 3. Income is sufficient for the requested financing
+ *
+ * Privacy: Actual credit score, income, and debt amounts remain private
+ *
+ * @module CreditRange
+ * @pragma language_version 0.20
+ */
+
+pragma language_version 0.20;
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/// Maximum DTI (Debt-to-Income) ratio in basis points (e.g., 5000 = 50%)
+const MAX_DTI_RATIO: Field = 5000;
+
+/// Credit score ranges
+const MIN_CREDIT_SCORE: Field = 300;
+const MAX_CREDIT_SCORE: Field = 850;
+
+/// Credit tiers
+const TIER_POOR: Uint<8> = 0;
+const TIER_FAIR: Uint<8> = 1;
+const TIER_GOOD: Uint<8> = 2;
+const TIER_VERY_GOOD: Uint<8> = 3;
+const TIER_EXCELLENT: Uint<8> = 4;
+
+/// Financing types
+enum FinancingType {
+    /// Murabaha (cost-plus financing)
+    MURABAHA = 0,
+    /// Ijara (leasing)
+    IJARA = 1,
+    /// Musharakah (joint venture)
+    MUSHARAKAH = 2,
+    /// Diminishing Musharakah
+    DIMINISHING_MUSHARAKAH = 3,
+    /// Salam (advance purchase)
+    SALAM = 4,
+    /// Istisna (construction financing)
+    ISTISNA = 5
+}
+
+// ============================================================================
+// Structs
+// ============================================================================
+
+/// User's financial data (Private)
+struct FinancialProfile {
+    /// Credit score (e.g., FICO, local bureau score)
+    creditScore: Field;
+    /// Monthly income
+    monthlyIncome: Field;
+    /// Existing monthly debt payments
+    monthlyDebtPayment: Field;
+    /// Total outstanding debt
+    totalDebt: Field;
+    /// Total assets
+    totalAssets: Field;
+}
+
+/// Financing request parameters
+struct FinancingRequest {
+    /// Type of Islamic financing
+    financingType: FinancingType;
+    /// Requested amount
+    amount: Field;
+    /// Term in months
+    termMonths: Uint<32>;
+    /// Expected monthly payment
+    expectedMonthlyPayment: Field;
+    /// Maximum allowed DTI for this product
+    maxAllowedDTI: Field;
+}
+
+/// Credit assessment result
+struct CreditAssessment {
+    /// Approved credit tier
+    creditTier: Uint<8>;
+    /// Maximum approved amount
+    maxApprovedAmount: Field;
+    /// Approved interest rate (or profit rate for Islamic finance)
+    approvedRate: Field;
+    /// Assessment timestamp
+    timestamp: Uint<64>;
+    /// Proof commitment
+    commitment: Field;
+}
+
+/// Credit tier thresholds
+struct CreditTierThresholds {
+    /// Minimum score for excellent tier
+    excellentMin: Field;
+    /// Minimum score for very good tier
+    veryGoodMin: Field;
+    /// Minimum score for good tier
+    goodMin: Field;
+    /// Minimum score for fair tier
+    fairMin: Field;
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Calculate credit tier from credit score
+/// @param creditScore User's credit score
+/// @param thresholds Credit tier thresholds
+/// @returns Credit tier
+function calculateCreditTier(creditScore: Field, thresholds: CreditTierThresholds) -> Uint<8> {
+    if (creditScore >= thresholds.excellentMin) {
+        return TIER_EXCELLENT;
+    } else if (creditScore >= thresholds.veryGoodMin) {
+        return TIER_VERY_GOOD;
+    } else if (creditScore >= thresholds.goodMin) {
+        return TIER_GOOD;
+    } else if (creditScore >= thresholds.fairMin) {
+        return TIER_FAIR;
+    } else {
+        return TIER_POOR;
+    }
+}
+
+/// Calculate debt-to-income ratio in basis points
+/// @param monthlyIncome Monthly income
+/// @param monthlyDebtPayment Monthly debt payments
+/// @returns DTI in basis points (10000 = 100%)
+function calculateDTI(monthlyIncome: Field, monthlyDebtPayment: Field) -> Field {
+    // Avoid division by zero
+    if (monthlyIncome == 0) {
+        return 10000; // Max DTI if no income
+    }
+
+    // DTI = (Debt / Income) * 10000
+    let dti = (monthlyDebtPayment * 10000) / monthlyIncome;
+    return dti;
+}
+
+/// Calculate new DTI with additional financing
+/// @param currentDTI Current DTI in basis points
+/// @param newPayment New monthly payment
+/// @param monthlyIncome Monthly income
+/// @returns New DTI in basis points
+function calculateNewDTI(currentDTI: Field, newPayment: Field, monthlyIncome: Field) -> Field {
+    if (monthlyIncome == 0) {
+        return 10000;
+    }
+
+    let newPaymentAmount = (newPayment * 10000) / monthlyIncome;
+    return currentDTI + newPaymentAmount;
+}
+
+/// Validate credit score is within valid range
+/// @param creditScore Score to validate
+/// @returns true if valid
+function validateCreditScore(creditScore: Field) -> Bool {
+    return creditScore >= MIN_CREDIT_SCORE && creditScore <= MAX_CREDIT_SCORE;
+}
+
+/// Calculate maximum monthly payment based on DTI limit
+/// @param monthlyIncome Monthly income
+/// @param currentMonthlyDebt Current debt payments
+/// @param maxDTI Maximum allowed DTI in basis points
+/// @returns Maximum affordable monthly payment
+function calculateMaxMonthlyPayment(
+    monthlyIncome: Field,
+    currentMonthlyDebt: Field,
+    maxDTI: Field
+) -> Field {
+    let maxTotalPayment = (monthlyIncome * maxDTI) / 10000;
+
+    if (maxTotalPayment > currentMonthlyDebt) {
+        return maxTotalPayment - currentMonthlyDebt;
+    } else {
+        return 0;
+    }
+}
+
+/// Compute commitment for proof verification
+/// @param creditScore Credit score
+/// @param dti Debt-to-income ratio
+/// @param tier Credit tier
+/// @param timestamp Proof timestamp
+/// @returns Commitment hash
+function computeCreditCommitment(
+    creditScore: Field,
+    dti: Field,
+    tier: Uint<8>,
+    timestamp: Uint<64>
+) -> Field {
+    return hash<Poseidon>(
+        creditScore,
+        dti,
+        cast<Field>(tier),
+        cast<Field>(timestamp)
+    );
+}
+
+// ============================================================================
+// Main Circuit
+// ============================================================================
+
+/**
+ * Verify credit eligibility for Islamic financing
+ *
+ * This circuit proves that the user meets the credit requirements
+ * without revealing their actual financial data.
+ *
+ * @param creditScore Private: User's credit score
+ * @param monthlyIncome Private: Monthly income
+ * @param monthlyDebtPayment Private: Current monthly debt payments
+ * @param totalDebt Private: Total outstanding debt
+ * @param request Public: Financing request details
+ * @param thresholds Public: Credit tier thresholds
+ * @returns Credit assessment result
+ */
+export circuit verifyCreditEligibility(
+    private creditScore: Field,
+    private monthlyIncome: Field,
+    private monthlyDebtPayment: Field,
+    private totalDebt: Field,
+    public request: FinancingRequest,
+    public thresholds: CreditTierThresholds
+) -> CreditAssessment {
+    // Validate credit score range
+    require(validateCreditScore(creditScore));
+
+    // Ensure non-negative values
+    require(monthlyIncome >= 0);
+    require(monthlyDebtPayment >= 0);
+    require(totalDebt >= 0);
+    require(request.amount > 0);
+
+    // Calculate current DTI
+    let currentDTI = calculateDTI(monthlyIncome, monthlyDebtPayment);
+
+    // Verify current DTI is within acceptable limits
+    require(currentDTI <= MAX_DTI_RATIO);
+
+    // Calculate DTI with new financing
+    let newDTI = calculateNewDTI(
+        currentDTI,
+        request.expectedMonthlyPayment,
+        monthlyIncome
+    );
+
+    // Verify new DTI is within financing limits
+    require(newDTI <= request.maxAllowedDTI);
+
+    // Calculate credit tier
+    let creditTier = calculateCreditTier(creditScore, thresholds);
+
+    // Ensure minimum credit tier for financing
+    require(creditTier >= TIER_FAIR);
+
+    // Calculate maximum approved amount based on DTI
+    let maxMonthlyPayment = calculateMaxMonthlyPayment(
+        monthlyIncome,
+        monthlyDebtPayment,
+        request.maxAllowedDTI
+    );
+
+    // Simple approval logic (would be more complex in production)
+    let maxApprovedAmount = request.amount;
+    if (maxMonthlyPayment < request.expectedMonthlyPayment) {
+        // Reduce amount if payment is too high
+        let ratio = maxMonthlyPayment / request.expectedMonthlyPayment;
+        maxApprovedAmount = (request.amount * ratio) / 10000;
+    }
+
+    // Calculate approved rate based on tier
+    let approvedRate: Field = 0;
+    if (creditTier == TIER_EXCELLENT) {
+        approvedRate = 500; // 5% profit rate
+    } else if (creditTier == TIER_VERY_GOOD) {
+        approvedRate = 700; // 7% profit rate
+    } else if (creditTier == TIER_GOOD) {
+        approvedRate = 900; // 9% profit rate
+    } else {
+        approvedRate = 1200; // 12% profit rate
+    }
+
+    // Compute commitment
+    let commitment = computeCreditCommitment(
+        creditScore,
+        newDTI,
+        creditTier,
+        block.timestamp
+    );
+
+    // Create assessment
+    let assessment = CreditAssessment {
+        creditTier: creditTier,
+        maxApprovedAmount: maxApprovedAmount,
+        approvedRate: approvedRate,
+        timestamp: block.timestamp,
+        commitment: commitment
+    };
+
+    // Emit event
+    emit<CreditEligibilityVerified>(
+        commitment,
+        creditTier,
+        maxApprovedAmount,
+        block.timestamp
+    );
+
+    return assessment;
+}
+
+// ============================================================================
+// Simplified Credit Check
+// ============================================================================
+
+/**
+ * Quick credit tier verification
+ *
+ * Use for pre-qualification scenarios where full assessment is not needed.
+ *
+ * @param creditScore Private: User's credit score
+ * @param minRequiredScore Public: Minimum required score
+ * @param dti Public: User's DTI (can be pre-computed)
+ * @param maxAllowedDTI Public: Maximum allowed DTI
+ * @returns Credit tier and commitment
+ */
+export circuit quickCreditCheck(
+    private creditScore: Field,
+    public minRequiredScore: Field,
+    public dti: Field,
+    public maxAllowedDTI: Field
+) -> Field {
+    // Validate credit score
+    require(validateCreditScore(creditScore));
+
+    // Check if score meets minimum
+    require(creditScore >= minRequiredScore);
+
+    // Check DTI
+    require(dti <= maxAllowedDTI);
+
+    // Calculate tier
+    let thresholds = CreditTierThresholds {
+        excellentMin: 750,
+        veryGoodMin: 700,
+        goodMin: 650,
+        fairMin: 600
+    };
+    let tier = calculateCreditTier(creditScore, thresholds);
+
+    // Compute commitment
+    let commitment = computeCreditCommitment(creditScore, dti, tier, block.timestamp);
+
+    emit<QuickCreditCheckPerformed>(
+        commitment,
+        tier,
+        block.timestamp
+    );
+
+    return commitment;
+}
+
+// ============================================================================
+// DTI Proof
+// ============================================================================
+
+/**
+ * Prove debt-to-income ratio without revealing amounts
+ *
+ * Useful for demonstrating Sharia compliance without exposing financial data.
+ *
+ * @param monthlyIncome Private: Monthly income
+ * @param monthlyDebtPayment Private: Monthly debt payments
+ * @param maxDTI Public: Maximum allowed DTI
+ * @returns Computed DTI and commitment
+ */
+export circuit proveDTI(
+    private monthlyIncome: Field,
+    private monthlyDebtPayment: Field,
+    public maxDTI: Field
+) -> Field {
+    // Ensure non-negative
+    require(monthlyIncome >= 0);
+    require(monthlyDebtPayment >= 0);
+
+    // Calculate DTI
+    let dti = calculateDTI(monthlyIncome, monthlyDebtPayment);
+
+    // Verify within limit
+    require(dti <= maxDTI);
+
+    // Commitment
+    let commitment = hash<Poseidon>(dti, cast<Field>(block.timestamp));
+
+    emit<DTIProven>(commitment, dti, block.timestamp);
+
+    return commitment;
+}
+
+// ============================================================================
+// Range Proof
+// ============================================================================
+
+/**
+ * Prove credit score is within a specific range
+ *
+ * Useful for targeted products (e.g., "for scores 650-750").
+ *
+ * @param creditScore Private: User's credit score
+ * @param minScore Public: Minimum score for range
+ * @param maxScore Public: Maximum score for range
+ * @returns Validity commitment
+ */
+export circuit proveScoreRange(
+    private creditScore: Field,
+    public minScore: Field,
+    public maxScore: Field
+) -> Field {
+    require(validateCreditScore(creditScore));
+    require(creditScore >= minScore);
+    require(creditScore <= maxScore);
+
+    let commitment = hash<Poseidon>(
+        creditScore,
+        minScore,
+        maxScore,
+        cast<Field>(block.timestamp)
+    );
+
+    emit<ScoreRangeProven>(commitment, minScore, maxScore, block.timestamp);
+
+    return commitment;
+}
+
+// ============================================================================
+// Events
+// ============================================================================
+
+/// Emitted when credit eligibility is verified
+event CreditEligibilityVerified(
+    commitment: Field,
+    creditTier: Uint<8>,
+    maxApprovedAmount: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when quick credit check is performed
+event QuickCreditCheckPerformed(
+    commitment: Field,
+    creditTier: Uint<8>,
+    timestamp: Uint<64>
+);
+
+/// Emitted when DTI is proven
+event DTIProven(
+    commitment: Field,
+    dti: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when score range is proven
+event ScoreRangeProven(
+    commitment: Field,
+    minScore: Field,
+    maxScore: Field,
+    timestamp: Uint<64>
+);

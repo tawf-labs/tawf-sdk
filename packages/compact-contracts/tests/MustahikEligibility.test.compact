@@ -1,0 +1,227 @@
+/**
+ * MustahikEligibility Circuit Tests
+ *
+ * Test suite for zakat eligibility verification circuit
+ *
+ * @pragma language_version 0.20
+ */
+
+pragma language_version 0.20;
+
+import {
+    verifyMustahikEligibility,
+    verifyEligibilitySimple,
+    verifyHouseholdEligibility
+} from '../src/circuits/MustahikEligibility.compact';
+
+// ============================================================================
+// Test Constants
+// ============================================================================
+
+const NISAB_THRESHOLD: Field = 50000000000; // Example nisab value
+const REGIONAL_ADJUSTMENT: Field = 10000; // 100% (no adjustment)
+
+const NISAB_CONFIG = NisabConfig {
+    nisabType: NisabType.GOLD,
+    baseThreshold: NISAB_THRESHOLD,
+    regionalAdjustment: REGIONAL_ADJUSTMENT
+};
+
+// ============================================================================
+// Test Cases
+// ============================================================================
+
+/**
+ * Test 1: Verify mustahik eligibility with low income
+ */
+test testEligibleMustahik() {
+    let result = verifyMustahikEligibility(
+        1000000000,    // income: below threshold
+        500000000,     // assets: below threshold
+        200000000,     // debts: increases eligibility
+        4,             // familySize: 4 dependents
+        NISAB_CONFIG,
+        1700000000     // timestamp
+    );
+
+    assert(result.isEligible == true);
+    assert(result.expiresAt > result.timestamp);
+}
+
+/**
+ * Test 2: Reject ineligible mustahik (high wealth)
+ */
+test testIneligibleMustahik() {
+    // Should fail because net wealth exceeds nisab
+    assertThrows(() => {
+        verifyMustahikEligibility(
+            100000000000,  // income: above threshold
+            50000000000,   // assets: above threshold
+            0,             // debts: none
+            2,             // familySize
+            NISAB_CONFIG,
+            1700000000
+        );
+    });
+}
+
+/**
+ * Test 3: Verify with zero debts
+ */
+test testEligibleWithZeroDebts() {
+    let result = verifyMustahikEligibility(
+        1000000000,    // income
+        2000000000,    // assets
+        0,             // debts
+        3,             // familySize
+        NISAB_CONFIG,
+        1700000000
+    );
+
+    // Still eligible if income + assets < nisab
+    assert(result.isEligible == true);
+}
+
+/**
+ * Test 4: Reject negative values
+ */
+test testRejectNegativeIncome() {
+    assertThrows(() => {
+        verifyMustahikEligibility(
+            -1,            // negative income (invalid)
+            0,
+            0,
+            1,
+            NISAB_CONFIG,
+            1700000000
+        );
+    });
+}
+
+/**
+ * Test 5: Verify proof freshness
+ */
+test testProofFreshness() {
+    let oldTimestamp = 1600000000; // Very old timestamp
+
+    // Should fail because proof is too old
+    assertThrows(() => {
+        verifyMustahikEligibility(
+            1000000000,
+            0,
+            0,
+            1,
+            NISAB_CONFIG,
+            oldTimestamp  // Too old (> 90 days)
+        );
+    });
+}
+
+/**
+ * Test 6: Simplified eligibility check
+ */
+test testSimpleEligibility() {
+    let netWealth: Field = 30000000000; // Below nisab
+    let commitment = verifyEligibilitySimple(
+        netWealth,
+        NISAB_THRESHOLD,
+        1700000000
+    );
+
+    // Should return a valid commitment
+    assert(commitment != 0);
+}
+
+/**
+ * Test 7: Household eligibility verification
+ */
+test testHouseholdEligibility() {
+    let result = verifyHouseholdEligibility(
+        2000000000,    // household income
+        1000000000,    // household assets
+        500000000,     // household debts
+        6,             // household size
+        NISAB_CONFIG,
+        1700000000
+    );
+
+    assert(result.isEligible == true);
+}
+
+/**
+ * Test 8: Family allowance calculation
+ */
+test testFamilyAllowance() {
+    // Larger family should have higher effective threshold
+    let resultSmall = verifyMustahikEligibility(
+        20000000000,
+        0,
+        0,
+        1,             // small family
+        NISAB_CONFIG,
+        1700000000
+    );
+
+    let resultLarge = verifyMustahikEligibility(
+        25000000000,
+        0,
+        0,
+        8,             // large family
+        NISAB_CONFIG,
+        1700000000
+    );
+
+    // Both should be eligible (different effective thresholds)
+    assert(resultSmall.isEligible == true);
+    assert(resultLarge.isEligible == true);
+}
+
+/**
+ * Test 9: Maximum family size validation
+ */
+test testMaxFamilySize() {
+    assertThrows(() => {
+        verifyMustahikEligibility(
+            0,
+            0,
+            0,
+            100,           // exceeds MAX_FAMILY_SIZE
+            NISAB_CONFIG,
+            1700000000
+        );
+    });
+}
+
+/**
+ * Test 10: Zero income with some assets
+ */
+test testZeroIncomeSomeAssets() {
+    let result = verifyMustahikEligibility(
+        0,              // no income
+        10000000000,    // some assets
+        0,              // no debt
+        2,
+        NISAB_CONFIG,
+        1700000000
+    );
+
+    // Eligible if total wealth < nisab
+    assert(result.isEligible == true);
+}
+
+// ============================================================================
+// Run all tests
+// ============================================================================
+
+runTests([
+    testEligibleMustahik,
+    testIneligibleMustahik,
+    testEligibleWithZeroDebts,
+    testRejectNegativeIncome,
+    testProofFreshness,
+    testSimpleEligibility,
+    testHouseholdEligibility,
+    testFamilyAllowance,
+    testMaxFamilySize,
+    testZeroIncomeSomeAssets
+]);

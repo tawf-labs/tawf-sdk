@@ -1,0 +1,53 @@
+{
+  "name": "@tawf/types",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for Tawf DID Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/index.js"
+    },
+    "./tid": {
+      "types": "./dist/tid.d.ts",
+      "import": "./dist/esm/tid.js",
+      "require": "./dist/tid.js"
+    },
+    "./proof": {
+      "types": "./dist/proof.d.ts",
+      "import": "./dist/esm/proof.js",
+      "require": "./dist/proof.js"
+    },
+    "./chain": {
+      "types": "./dist/chain.d.ts",
+      "import": "./dist/esm/chain.js",
+      "require": "./dist/chain.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -b --force && tsc -p tsconfig.esm.json && node scripts/mark-esm.mjs",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "keywords": [
+    "did",
+    "types",
+    "typescript",
+    "tawf"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.8.0"
+  },
+  "module": "dist/esm/index.js"
+}

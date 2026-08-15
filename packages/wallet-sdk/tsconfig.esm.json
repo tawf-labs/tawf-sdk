@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist/esm",
+    "tsBuildInfoFile": "./dist/esm/.tsbuildinfo",
+
+    // Declarations come from the CommonJS pass, which is what `exports.types`
+    // points at. Emitting them twice would only create two sources of truth.
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+
+    // The base config aliases @tawf/types to that package's SOURCE, which is
+    // correct for the composite build because the project reference makes tsc
+    // read its declarations instead. This pass is not composite, so the alias
+    // would drag types' .ts files into this program and break rootDir. Point at
+    // the built declarations so the import stays external and un-compiled.
+    "paths": {
+      "@tawf/types": ["../types/dist/index.d.ts"],
+      "@tawf/types/*": ["../types/dist/*"]
+    }
+  },
+  "references": [],
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules", "**/*.test.ts"]
+}

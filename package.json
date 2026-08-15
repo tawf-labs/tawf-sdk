@@ -1,0 +1,42 @@
+{
+  "name": "tawf-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDKs and contracts for the Tawf Islamic Foundation ecosystem. Identity (Tawf ID) and notarization (tawf-verify) libraries.",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "keywords": [
+    "tawf",
+    "sdk",
+    "zakat",
+    "waqf",
+    "did",
+    "merkle",
+    "notarization",
+    "islamic-finance",
+    "ethereum",
+    "arbitrum"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tawf-labs/tawf-sdk"
+  }
+}

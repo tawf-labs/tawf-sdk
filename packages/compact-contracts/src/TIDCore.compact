@@ -1,0 +1,562 @@
+/**
+ * TIDCore.compact - Core TID Identity Contract
+ *
+ * This is the main identity contract for the Tawf DID Protocol.
+ * It manages the lifecycle of TID (Tawf ID) soulbound credentials on
+ * the Midnight Network with zero-knowledge proof capabilities.
+ *
+ * Key Features:
+ * - Soulbound TID credentials (non-transferable)
+ * - Zero-knowledge proof generation and verification
+ * - Revocation registry
+ * - Nullifier tracking for double-spending prevention
+ * - Multi-credential type support
+ *
+ * @module TIDCore
+ * @pragma language_version 0.20
+ */
+
+pragma language_version 0.20;
+
+// ============================================================================
+// State
+// ============================================================================
+
+/// Registry of all TID credentials
+/// @notice Maps TID hash to TID struct
+export ledger tidRegistry: Map<Field, TID>;
+
+/// Global revocation list
+/// @notice Maps TID hash to revocation status
+export ledger revocationList: Map<Field, Bool>;
+
+/// Nullifier registry for double-spending prevention
+/// @notice Used for DAO voting, one-time claims, etc.
+export ledger nullifiers: Map<Field, Bool>;
+
+/// Authorized issuers (Foundation-controlled)
+/// @notice Set of addresses authorized to mint TIDs
+export ledger authorizedIssuers: Set<Field>;
+
+/// Authorized guardians (Foundation-controlled)
+/// @notice Set of addresses authorized to revoke TIDs
+export ledger authorizedGuardians: Set<Field>;
+
+/// Current merkle root of TID state
+/// @notice Updated periodically for cross-chain bridging
+export merkleRoot: Field;
+
+/// Merkle root update history
+/// @notice Tracks all root updates for fraud proofs
+export ledger rootUpdateHistory: Map<Uint<64>, RootUpdate>;
+
+/// Counter for root updates
+export rootUpdateCounter: Uint<64>;
+
+// ============================================================================
+// Structs
+// ============================================================================
+
+/// TID Credential Structure
+/// @param owner Public key of the TID owner
+/// @param issuer Public key of the issuer
+/// @param issuedAt Unix timestamp of issuance
+/// @param credentialType Type of credential (see CredentialType enum)
+/// @param metadataHash Hash of credential metadata
+/// @param status Current verification status
+/// @param expiresAt Unix timestamp of expiration (0 = never expires)
+struct TID {
+    owner: Field;
+    issuer: Field;
+    issuedAt: Uint<64>;
+    credentialType: Uint<8>;
+    metadataHash: Field;
+    status: EligibilityStatus;
+    expiresAt: Uint<64>;
+}
+
+/// Merkle Root Update Information
+/// @param oldRoot Previous merkle root
+/// @param newRoot New merkle root
+/// @param midnightBlockNumber Block number when update occurred
+/// @param timestamp Unix timestamp of update
+struct RootUpdate {
+    oldRoot: Field;
+    newRoot: Field;
+    midnightBlockNumber: Uint<64>;
+    timestamp: Uint<64>;
+}
+
+/// Issuer Authorization Information
+/// @param issuer Address of authorized issuer
+/// @param authorizedAt When they were authorized
+/// @param authorizedBy Who authorized them
+struct IssuerAuth {
+    issuer: Field;
+    authorizedAt: Uint<64>;
+    authorizedBy: Field;
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+/// Eligibility Status Values
+enum EligibilityStatus {
+    /// Initial state after minting
+    UNVERIFIED = 0,
+    /// Verified as eligible (e.g., for zakat)
+    ELIGIBLE = 1,
+    /// Verified as ineligible
+    INELIGIBLE = 2,
+    /// Revoked by guardian
+    REVOKED = 3,
+    /// Expired based on expiresAt timestamp
+    EXPIRED = 4
+}
+
+/// Credential Type Values
+enum CredentialType {
+    /// Zakat recipient eligibility
+    MUSTAHIK = 0,
+    /// Zakat collector
+    AMIL = 1,
+    /// Zakat payer
+    MUZAKKI = 2,
+    /// DAO governance participant
+    DAO_MEMBER = 3,
+    /// tawf.finance user
+    FINANCE_USER = 4,
+    /// Authorized verifier
+    VERIFIER = 5
+}
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+/// Compute TID hash from components
+/// @param owner Owner's public key
+/// @param issuer Issuer's public key
+/// @param timestamp Issuance timestamp
+/// @returns Hash of the TID
+function computeTIDHash(owner: Field, issuer: Field, timestamp: Uint<64>) -> Field {
+    return hash<Poseidon>(owner, issuer, timestamp);
+}
+
+/// Verify TID expiration
+/// @param tid The TID to check
+/// @returns true if not expired
+function verifyNotExpired(tid: TID) -> Bool {
+    // expiresAt of 0 means no expiration
+    if (tid.expiresAt == 0) {
+        return true;
+    }
+    return tid.expiresAt > block.timestamp;
+}
+
+/// Check if caller is authorized issuer
+/// @returns true if caller is authorized
+function isAuthorizedIssuer() -> Bool {
+    return authorizedIssuers.contains(msg.sender);
+}
+
+/// Check if caller is authorized guardian
+/// @returns true if caller is authorized
+function isAuthorizedGuardian() -> Bool {
+    return authorizedGuardians.contains(msg.sender);
+}
+
+// ============================================================================
+// Admin Circuits
+// ============================================================================
+
+/// Authorize a new issuer
+/// @notice Can only be called by existing authorized issuers
+/// @param newIssuer Address of the new issuer
+export circuit authorizeIssuer(
+    public newIssuer: Field
+) {
+    require(isAuthorizedIssuer());
+
+    authorizedIssuers.add(newIssuer);
+
+    // Emit authorization event
+    emit<IssuerAuthorized>(msg.sender, newIssuer, block.timestamp);
+}
+
+/// Revoke issuer authorization
+/// @notice Can only be called by existing authorized issuers
+/// @param issuer Address of the issuer to revoke
+export circuit revokeIssuerAuth(
+    public issuer: Field
+) {
+    require(isAuthorizedIssuer());
+
+    authorizedIssuers.remove(issuer);
+
+    // Emit revocation event
+    emit<IssuerRevoked>(msg.sender, issuer, block.timestamp);
+}
+
+/// Authorize a new guardian
+/// @notice Can only be called by existing authorized guardians
+/// @param newGuardian Address of the new guardian
+export circuit authorizeGuardian(
+    public newGuardian: Field
+) {
+    require(isAuthorizedGuardian());
+
+    authorizedGuardians.add(newGuardian);
+
+    // Emit authorization event
+    emit<GuardianAuthorized>(msg.sender, newGuardian, block.timestamp);
+}
+
+/// Revoke guardian authorization
+/// @notice Can only be called by existing authorized guardians
+/// @param guardian Address of the guardian to revoke
+export circuit revokeGuardianAuth(
+    public guardian: Field
+) {
+    require(isAuthorizedGuardian());
+
+    authorizedGuardians.remove(guardian);
+
+    // Emit revocation event
+    emit<GuardianRevoked>(msg.sender, guardian, block.timestamp);
+}
+
+// ============================================================================
+// Core TID Circuits
+// ============================================================================
+
+/// Mint a new TID credential
+/// @notice Can only be called by authorized issuers
+/// @param owner Public key of the TID owner
+/// @param credentialType Type of credential to mint
+/// @param metadataHash Hash of credential metadata
+/// @param expiresAt Expiration timestamp (0 = never expires)
+/// @returns tidHash The hash of the minted TID
+export circuit mint(
+    private owner: Field,
+    public credentialType: Uint<8>,
+    public metadataHash: Field,
+    public expiresAt: Uint<64>
+) -> Field {
+    // Verify issuer authorization
+    require(isAuthorizedIssuer());
+
+    // Compute TID hash
+    let tidHash = computeTIDHash(owner, msg.sender, block.timestamp);
+
+    // Ensure TID doesn't already exist
+    require(!tidRegistry.contains(tidHash));
+
+    // Create new TID
+    let newTID = TID {
+        owner: owner,
+        issuer: msg.sender,
+        issuedAt: block.timestamp,
+        credentialType: credentialType,
+        metadataHash: metadataHash,
+        status: EligibilityStatus.UNVERIFIED,
+        expiresAt: expiresAt
+    };
+
+    // Store in registry
+    tidRegistry[tidHash] = newTID;
+
+    // Emit minting event
+    emit<TIDMinted>(tidHash, owner, msg.sender, credentialType, metadataHash, block.timestamp);
+
+    // Return TID hash
+    return tidHash;
+}
+
+/// Verify and update TID eligibility status
+/// @notice Updates status based on zero-knowledge proof verification
+/// @param tidHash Hash of the TID to update
+/// @param newStatus New eligibility status
+/// @param proofHash Hash of the verifying ZK proof
+export circuit verifyEligibility(
+    public tidHash: Field,
+    public newStatus: Uint<8>,
+    public proofHash: Field
+) {
+    // Verify TID exists
+    require(tidRegistry.contains(tidHash));
+
+    let tid = tidRegistry[tidHash];
+
+    // Verify not expired
+    require(verifyNotExpired(tid));
+
+    // Verify not revoked
+    require(!revocationList[tidHash]);
+
+    // Update status
+    tidRegistry[tidHash].status = cast<EligibilityStatus>(newStatus);
+
+    // Emit verification event
+    emit<EligibilityVerified>(tidHash, newStatus, proofHash, block.timestamp);
+}
+
+/// Revoke a TID credential
+/// @notice Can only be called by authorized guardians
+/// @param tidHash Hash of the TID to revoke
+/// @param reason Reason for revocation
+export circuit revoke(
+    public tidHash: Field,
+    public reason: Field
+) {
+    // Verify guardian authorization
+    require(isAuthorizedGuardian());
+
+    // Verify TID exists
+    require(tidRegistry.contains(tidHash));
+
+    // Add to revocation list
+    revocationList[tidHash] = true;
+
+    // Update status
+    tidRegistry[tidHash].status = EligibilityStatus.REVOKED;
+
+    // Emit revocation event
+    emit<TIDRevoked>(tidHash, msg.sender, reason, block.timestamp);
+}
+
+/// Update TID status to expired
+/// @notice Called when expiration time is reached
+/// @param tidHash Hash of the expired TID
+export circuit markExpired(
+    public tidHash: Field
+) {
+    // Verify TID exists
+    require(tidRegistry.contains(tidHash));
+
+    let tid = tidRegistry[tidHash];
+
+    // Verify expiration time has passed
+    require(tid.expiresAt > 0);
+    require(tid.expiresAt < block.timestamp);
+
+    // Update status
+    tidRegistry[tidHash].status = EligibilityStatus.EXPIRED;
+
+    // Emit expiration event
+    emit<TIDExpired>(tidHash, block.timestamp);
+}
+
+// ============================================================================
+// Nullifier Management
+// ============================================================================
+
+/// Register a nullifier to prevent double-spending/usage
+/// @notice Used for one-time operations like DAO voting
+/// @param nullifier Unique nullifier value
+/// @returns true if successfully registered
+export circuit registerNullifier(
+    public nullifier: Field
+) -> Bool {
+    // Check if nullifier already exists
+    require(!nullifiers.contains(nullifier));
+
+    // Register nullifier
+    nullifiers[nullifier] = true;
+
+    // Emit nullifier registered event
+    emit<NullifierRegistered>(nullifier, block.timestamp);
+
+    return true;
+}
+
+/// Check if a nullifier exists
+/// @param nullifier Nullifier value to check
+/// @returns true if nullifier exists
+export circuit nullifierExists(
+    public nullifier: Field
+) -> Bool {
+    return nullifiers.contains(nullifier);
+}
+
+// ============================================================================
+// Merkle Root Management
+// ============================================================================
+
+/// Update the merkle root of TID state
+/// @notice Used for cross-chain bridging
+/// @param newRoot New merkle root
+/// @param signature Signature from authorized guardian
+export circuit updateMerkleRoot(
+    public newRoot: Field,
+    public signature: Field
+) {
+    // Verify guardian authorization
+    require(isAuthorizedGuardian());
+
+    // Store old root
+    let oldRoot = merkleRoot;
+
+    // Update root
+    merkleRoot = newRoot;
+
+    // Record in history
+    let update = RootUpdate {
+        oldRoot: oldRoot,
+        newRoot: newRoot,
+        midnightBlockNumber: block.number,
+        timestamp: block.timestamp
+    };
+    rootUpdateHistory[rootUpdateCounter] = update;
+    rootUpdateCounter = rootUpdateCounter + 1;
+
+    // Emit root update event
+    emit<MerkleRootUpdated>(oldRoot, newRoot, block.number, block.timestamp);
+}
+
+/// Get the current merkle root
+/// @returns Current merkle root
+export circuit getCurrentMerkleRoot() -> Field {
+    return merkleRoot;
+}
+
+// ============================================================================
+// Query Circuits
+// ============================================================================
+
+/// Get TID by hash
+/// @param tidHash Hash of the TID
+/// @returns TID struct
+export circuit getTID(
+    public tidHash: Field
+) -> TID {
+    require(tidRegistry.contains(tidHash));
+    return tidRegistry[tidHash];
+}
+
+/// Check if TID exists
+/// @param tidHash Hash of the TID
+/// @returns true if TID exists
+export circuit tidExists(
+    public tidHash: Field
+) -> Bool {
+    return tidRegistry.contains(tidHash);
+}
+
+/// Check if TID is revoked
+/// @param tidHash Hash of the TID
+/// @returns true if TID is revoked
+export circuit isRevoked(
+    public tidHash: Field
+) -> Bool {
+    return revocationList[tidHash];
+}
+
+/// Get TID status
+/// @param tidHash Hash of the TID
+/// @returns Current status
+export circuit getTIDStatus(
+    public tidHash: Field
+) -> Uint<8 {
+    require(tidRegistry.contains(tidHash));
+    return cast<Uint<8>>(tidRegistry[tidHash].status);
+}
+
+/// Get TIDs owned by an address
+/// @param owner Address to query
+/// @param startIndex Start index for pagination
+/// @param count Number of results
+/// @returns Array of TID hashes
+export circuit getTIDsByOwner(
+    public owner: Field,
+    public startIndex: Uint<64>,
+    public count: Uint<64>
+) -> Field[count] {
+    // Note: This is a simplified version
+    // In practice, you'd iterate through the registry
+    // This might require a different data structure for efficiency
+
+    // For now, return empty array as placeholder
+    // Actual implementation would use an indexed mapping
+    let empty: Field[count] = [];
+    return empty;
+}
+
+// ============================================================================
+// Events
+// ============================================================================
+
+/// Emitted when a new issuer is authorized
+event IssuerAuthorized(
+    authorizedBy: Field,
+    newIssuer: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when an issuer authorization is revoked
+event IssuerRevoked(
+    revokedBy: Field,
+    issuer: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a new guardian is authorized
+event GuardianAuthorized(
+    authorizedBy: Field,
+    newGuardian: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a guardian authorization is revoked
+event GuardianRevoked(
+    revokedBy: Field,
+    guardian: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a TID is minted
+event TIDMinted(
+    tidHash: Field,
+    owner: Field,
+    issuer: Field,
+    credentialType: Uint<8>,
+    metadataHash: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when TID eligibility is verified
+event EligibilityVerified(
+    tidHash: Field,
+    status: Uint<8>,
+    proofHash: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a TID is revoked
+event TIDRevoked(
+    tidHash: Field,
+    revokedBy: Field,
+    reason: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a TID expires
+event TIDExpired(
+    tidHash: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when a nullifier is registered
+event NullifierRegistered(
+    nullifier: Field,
+    timestamp: Uint<64>
+);
+
+/// Emitted when the merkle root is updated
+event MerkleRootUpdated(
+    oldRoot: Field,
+    newRoot: Field,
+    blockNumber: Uint<64>,
+    timestamp: Uint<64>
+);

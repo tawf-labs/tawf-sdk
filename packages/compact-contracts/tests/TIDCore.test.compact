@@ -1,0 +1,247 @@
+/**
+ * TIDCore Contract Tests
+ *
+ * Test suite for the core TID identity contract
+ *
+ * @pragma language_version 0.20
+ */
+
+pragma language_version 0.20;
+
+// Import the contract
+import { TIDCore } from '../src/TIDCore.compact';
+
+// ============================================================================
+// Test Constants
+// ============================================================================
+
+const TEST_ISSUER: Field = 0x1234567890abcdef;
+const TEST_GUARDIAN: Field = 0xabcdef1234567890;
+const TEST_OWNER: Field = 0x1111222233334444;
+const TEST_METADATA_HASH: Field = 0x5555666677778888;
+
+// ============================================================================
+// Setup
+// ============================================================================
+
+// Initialize contract state
+let tidRegistry: Map<Field, TID> = {};
+let revocationList: Map<Field, Bool> = {};
+let nullifiers: Map<Field, Bool> = {};
+let authorizedIssuers: Set<Field> = {};
+let authorizedGuardians: Set<Field> = {};
+
+// Add test issuer and guardian
+authorizedIssuers.add(TEST_ISSUER);
+authorizedGuardians.add(TEST_GUARDIAN);
+
+// ============================================================================
+// Test Cases
+// ============================================================================
+
+/**
+ * Test 1: Mint TID successfully
+ */
+test testMintTID() {
+    let tidHash = computeTIDHash(TEST_OWNER, TEST_ISSUER, 12345);
+
+    // Verify TID doesn't exist
+    assert(!tidRegistry.contains(tidHash));
+
+    // Mint TID
+    let result = mint(
+        TEST_OWNER,
+        0,  // MUSTAHIK
+        TEST_METADATA_HASH,
+        0   // No expiration
+    );
+
+    // Verify TID was created
+    assert(tidRegistry.contains(result));
+    assert(tidRegistry[result].owner == TEST_OWNER);
+    assert(tidRegistry[result].issuer == TEST_ISSUER);
+    assert(tidRegistry[result].status == EligibilityStatus.UNVERIFIED);
+}
+
+/**
+ * Test 2: Unauthorized minting fails
+ */
+test testUnauthorizedMint() {
+    let unauthorizedCaller = 0x9999999999999999;
+
+    // Attempt to mint with unauthorized caller should fail
+    assertThrows(() => {
+        mint(
+            TEST_OWNER,
+            0,
+            TEST_METADATA_HASH,
+            0
+        );
+    });
+}
+
+/**
+ * Test 3: Revoke TID successfully
+ */
+test testRevokeTID() {
+    let tidHash = computeTIDHash(TEST_OWNER, TEST_ISSUER, 54321);
+
+    // First mint a TID
+    mint(TEST_OWNER, 0, TEST_METADATA_HASH, 0);
+
+    // Verify it's not revoked
+    assert(!revocationList[tidHash]);
+
+    // Revoke the TID
+    revoke(tidHash, 0x1); // reason code
+
+    // Verify it's revoked
+    assert(revocationList[tidHash]);
+    assert(tidRegistry[tidHash].status == EligibilityStatus.REVOKED);
+}
+
+/**
+ * Test 4: Nullifier registration
+ */
+test testNullifierRegistration() {
+    let nullifier = 0xaaabbbcccdddeee;
+
+    // Verify nullifier doesn't exist
+    assert(!nullifiers.contains(nullifier));
+
+    // Register nullifier
+    let result = registerNullifier(nullifier);
+
+    // Verify it was registered
+    assert(result == true);
+    assert(nullifiers.contains(nullifier));
+
+    // Attempting to register again should fail
+    assertThrows(() => {
+        registerNullifier(nullifier);
+    });
+}
+
+/**
+ * Test 5: Merkle root update
+ */
+test testMerkleRootUpdate() {
+    let oldRoot = merkleRoot;
+    let newRoot = 0xfedcba9876543210;
+
+    // Update merkle root
+    updateMerkleRoot(newRoot, 0x0);
+
+    // Verify it was updated
+    assert(merkleRoot == newRoot);
+    assert(merkleRoot != oldRoot);
+
+    // Verify history was recorded
+    assert(rootUpdateCounter > 0);
+}
+
+/**
+ * Test 6: Verify eligibility status update
+ */
+test testVerifyEligibility() {
+    let tidHash = computeTIDHash(TEST_OWNER, TEST_ISSUER, 99999);
+
+    // Mint TID first
+    mint(TEST_OWNER, 0, TEST_METADATA_HASH, 0);
+
+    // Verify initial status
+    assert(tidRegistry[tidHash].status == EligibilityStatus.UNVERIFIED);
+
+    // Update to ELIGIBLE
+    verifyEligibility(tidHash, 1, 0x1111); // ELIGIBLE status
+
+    // Verify status was updated
+    assert(tidRegistry[tidHash].status == EligibilityStatus.ELIGIBLE);
+}
+
+/**
+ * Test 7: Authorize new issuer
+ */
+test testAuthorizeIssuer() {
+    let newIssuer = 0x5555666677778888;
+
+    // Verify issuer not authorized
+    assert(!authorizedIssuers.contains(newIssuer));
+
+    // Authorize issuer
+    authorizeIssuer(newIssuer);
+
+    // Verify now authorized
+    assert(authorizedIssuers.contains(newIssuer));
+}
+
+/**
+ * Test 8: Authorize new guardian
+ */
+test testAuthorizeGuardian() {
+    let newGuardian = 0x9999aaaabbbbcccc;
+
+    // Verify guardian not authorized
+    assert(!authorizedGuardians.contains(newGuardian));
+
+    // Authorize guardian
+    authorizeGuardian(newGuardian);
+
+    // Verify now authorized
+    assert(authorizedGuardians.contains(newGuardian));
+}
+
+/**
+ * Test 9: Get TID by hash
+ */
+test testGetTID() {
+    let tidHash = computeTIDHash(TEST_OWNER, TEST_ISSUER, 11111);
+
+    // Mint TID
+    mint(TEST_OWNER, 0, TEST_METADATA_HASH, 0);
+
+    // Get TID
+    let tid = getTID(tidHash);
+
+    // Verify TID data
+    assert(tid.owner == TEST_OWNER);
+    assert(tid.issuer == TEST_ISSUER);
+    assert(tid.credentialType == 0);
+}
+
+/**
+ * Test 10: Check TID exists
+ */
+test testTIDExists() {
+    let tidHash = computeTIDHash(TEST_OWNER, TEST_ISSUER, 22222);
+    let fakeHash = 0xbadbadbadbadbad;
+
+    // Verify TID doesn't exist
+    assert(!tidExists(tidHash));
+
+    // Mint TID
+    mint(TEST_OWNER, 0, TEST_METADATA_HASH, 0);
+
+    // Verify TID now exists
+    assert(tidExists(tidHash));
+
+    // Verify fake hash doesn't exist
+    assert(!tidExists(fakeHash));
+}
+
+// ============================================================================
+// Run all tests
+// ============================================================================
+
+runTests([
+    testMintTID,
+    testUnauthorizedMint,
+    testRevokeTID,
+    testNullifierRegistration,
+    testMerkleRootUpdate,
+    testVerifyEligibility,
+    testAuthorizeIssuer,
+    testAuthorizeGuardian,
+    testGetTID,
+    testTIDExists
+]);

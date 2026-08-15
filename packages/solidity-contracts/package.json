@@ -1,0 +1,54 @@
+{
+  "name": "@tawf/solidity-contracts",
+  "version": "1.0.0",
+  "description": "Ethereum & Base Solidity smart contracts for Tawf DID Protocol",
+  "scripts": {
+    "compile": "hardhat compile",
+    "build": "hardhat compile && tsc",
+    "test": "hardhat test",
+    "test:coverage": "hardhat coverage",
+    "test:foundry": "forge test",
+    "deploy:ethereum:testnet": "hardhat deploy --network ethereum-testnet --tags ethereum",
+    "deploy:ethereum:mainnet": "hardhat deploy --network ethereum-mainnet --tags ethereum",
+    "deploy:base:testnet": "hardhat deploy --network base-testnet --tags base",
+    "deploy:base:mainnet": "hardhat deploy --network base-mainnet --tags base",
+    "verify": "hardhat verify",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "format": "prettier --write 'contracts/**/*.sol'",
+    "clean": "hardhat clean && rm -rf dist artifacts cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "ethereum",
+    "base",
+    "solidity",
+    "sbt",
+    "soulbound",
+    "erc-5192",
+    "merkle",
+    "did"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "@tawf/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@typechain/hardhat": "^9.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.11.0",
+    "hardhat": "^2.19.0",
+    "hardhat-deploy": "^0.11.0",
+    "hardhat-gas-reporter": "^1.0.9",
+    "prettier": "^3.2.0",
+    "prettier-plugin-solidity": "^1.3.0",
+    "solhint": "^4.0.0",
+    "solidity-coverage": "^0.8.5",
+    "ts-node": "^10.9.0",
+    "typechain": "^8.3.0",
+    "typescript": "^5.8.0"
+  }
+}

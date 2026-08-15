@@ -1,0 +1,35 @@
+{
+  "name": "@tawf/compact-contracts",
+  "version": "1.0.0",
+  "description": "Midnight Network Compact smart contracts for Tawf DID Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "compile": "node scripts/compile.js",
+    "build": "tsc",
+    "test": "compact-test tests/**/*.compact",
+    "deploy:testnet": "node scripts/deploy.js --network testnet",
+    "deploy:mainnet": "node scripts/deploy.js --network mainnet",
+    "verify": "node scripts/verify.js",
+    "clean": "rm -rf dist build target",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "midnight",
+    "compact",
+    "zk-proof",
+    "did",
+    "tawf"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "^0.14.0",
+    "@midnight-ntwrk/midnight-js": "^4.0.3",
+    "@tawf/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.8.0"
+  }
+}

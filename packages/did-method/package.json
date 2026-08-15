@@ -1,0 +1,32 @@
+{
+  "name": "@tawf/did-method",
+  "version": "1.0.0",
+  "description": "did:tawf DID method specification and universal resolver",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "did",
+    "did-method",
+    "resolver",
+    "universal-resolver",
+    "w3c"
+  ],
+  "author": "Tawf Islamic Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@tawf/types": "workspace:*",
+    "cross-fetch": "^4.0.0",
+    "events": "^3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.8.0"
+  }
+}
