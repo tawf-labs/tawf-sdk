@@ -19,11 +19,9 @@ export default function App() {
       <header>
         <nav className="fixed top-0 left-0 right-0 z-50 bg-tawf-sand/90 backdrop-blur-md border-b border-tawf-green/10" role="navigation" aria-label="Main navigation">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-tawf-green rounded-xl flex items-center justify-center">
-                <span className="font-serif text-tawf-gold text-lg font-medium">T</span>
-              </div>
-              <span className="font-serif text-xl text-tawf-green">tawf-sdk</span>
+            <Link to="/" className="flex items-center gap-1">
+              <img src="/images/tawftransparent.png" alt="Tawf" className="pt-2 h-24 w-auto invert" />
+              <span className="font-serif text-lg text-tawf-green whitespace-nowrap">sdk</span>
             </Link>
 
             <div className="hidden lg:flex items-center gap-8">
@@ -80,14 +78,10 @@ export default function App() {
       <footer className="bg-tawf-ink text-white/60 py-16 border-t border-white/10" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-tawf-green rounded-xl flex items-center justify-center">
-                <span className="font-serif text-tawf-gold text-lg font-medium">T</span>
-              </div>
-              <span className="font-serif text-xl text-white">tawf-sdk</span>
-            </div>
+            <img src="/images/tawftransparent.png" alt="Tawf" className="-ml-3 h-24 w-auto mb-2" />
+            <h3 className="sr-only">tawf-sdk</h3>
             <p className="text-sm max-w-sm leading-relaxed">
-              TypeScript SDKs and contracts for the Tawf Islamic Foundation ecosystem.
+              TypeScript SDKs and smart contracts for the Tawf Islamic Foundation ecosystem.
             </p>
           </div>
 
