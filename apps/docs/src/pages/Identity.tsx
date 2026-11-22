@@ -55,7 +55,7 @@ export default function Identity() {
         <div className="max-w-3xl space-y-12">
           <div>
             <h2 className="font-serif text-3xl text-tawf-green mb-6">Install</h2>
-            <CodeBlock code="pnpm add @tawf/wallet-sdk @tawf/did-method @tawf/types" />
+            <CodeBlock code={"# not on npm yet\npnpm add @tawf/wallet-sdk @tawf/did-method @tawf/types"} />
           </div>
 
           <div>
