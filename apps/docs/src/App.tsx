@@ -17,7 +17,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-tawf-sand">
       <header>
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-[#EEF1EC]/90 backdrop-blur-md border-b border-[#CED8D1]" role="navigation" aria-label="Main navigation">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-[#EEF1EC]/90 backdrop-blur-md border-b border-[#AEBFB5]" role="navigation" aria-label="Main navigation">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-1">
               <img src="/images/tawftransparent.png" alt="Tawf" className="pt-2 h-24 w-auto invert" />
@@ -25,13 +25,13 @@ export default function App() {
             </Link>
 
             <div className="hidden lg:flex items-center gap-8">
-              <Link to="/" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
+              <Link to="/" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/' ? 'text-[#1F6B54]' : 'text-[#33473F] hover:text-[#10261F]'}`}>
                 Overview
               </Link>
-              <Link to="/identity" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/identity' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
+              <Link to="/identity" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/identity' ? 'text-[#1F6B54]' : 'text-[#33473F] hover:text-[#10261F]'}`}>
                 Identity
               </Link>
-              <Link to="/notarization" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/notarization' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
+              <Link to="/notarization" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/notarization' ? 'text-[#1F6B54]' : 'text-[#33473F] hover:text-[#10261F]'}`}>
                 Notarization
               </Link>
               <Link
@@ -52,11 +52,11 @@ export default function App() {
           </div>
 
           {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-[#CED8D1] bg-[#FBFCFA]">
+            <div className="lg:hidden border-t border-[#AEBFB5] bg-[#FBFCFA]">
               <div className="px-6 py-4 space-y-4">
-                <Link to="/" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Overview</Link>
-                <Link to="/identity" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Identity</Link>
-                <Link to="/notarization" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Notarization</Link>
+                <Link to="/" className="flex min-h-11 items-center text-[15px] font-medium text-[#33473F] hover:text-[#10261F]">Overview</Link>
+                <Link to="/identity" className="flex min-h-11 items-center text-[15px] font-medium text-[#33473F] hover:text-[#10261F]">Identity</Link>
+                <Link to="/notarization" className="flex min-h-11 items-center text-[15px] font-medium text-[#33473F] hover:text-[#10261F]">Notarization</Link>
                 <Link to="/integration" className="flex h-12 items-center justify-center rounded-xl bg-[#1F6B54] text-[15px] font-medium text-white">
                   Get Started
                 </Link>
@@ -75,7 +75,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="bg-[#10261F] text-white/70 py-16 border-t border-white/10" role="contentinfo">
+      <footer className="bg-[#10261F] text-white/80 py-16 border-t border-white/10" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <img src="/images/tawftransparent.png" alt="Tawf" className="-ml-3 h-24 w-auto mb-2" />

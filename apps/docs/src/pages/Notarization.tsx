@@ -26,7 +26,7 @@ export default function Notarization() {
         <div className="text-center mb-16">
           <div className="flex items-center justify-center gap-3 mb-8">
             <div className="h-px w-12 bg-tawf-gold"></div>
-            <span className="text-sm font-semibold tracking-[0.2em] uppercase text-tawf-gold">Packages</span>
+            <span className="text-sm font-semibold tracking-[0.2em] uppercase text-[#8A6414]">Packages</span>
             <div className="h-px w-12 bg-tawf-gold"></div>
           </div>
           <h2 className="text-4xl md:text-5xl font-light text-tawf-green mb-6">The notarization stack</h2>
