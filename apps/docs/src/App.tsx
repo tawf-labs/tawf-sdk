@@ -17,33 +17,33 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-tawf-sand">
       <header>
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-tawf-sand/90 backdrop-blur-md border-b border-tawf-green/10" role="navigation" aria-label="Main navigation">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-[#EEF1EC]/90 backdrop-blur-md border-b border-[#CED8D1]" role="navigation" aria-label="Main navigation">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-1">
               <img src="/images/tawftransparent.png" alt="Tawf" className="pt-2 h-24 w-auto invert" />
-              <span className="font-serif text-lg text-tawf-green whitespace-nowrap">sdk</span>
+              <span className="text-lg font-medium tracking-[-0.03em] text-[#10261F] whitespace-nowrap">sdk</span>
             </Link>
 
             <div className="hidden lg:flex items-center gap-8">
-              <Link to="/" className={`text-sm font-medium tracking-widest uppercase transition-colors ${pathname === '/' ? 'text-tawf-green' : 'text-tawf-ink/70 hover:text-tawf-green'}`}>
+              <Link to="/" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
                 Overview
               </Link>
-              <Link to="/identity" className={`text-sm font-medium tracking-widest uppercase transition-colors ${pathname === '/identity' ? 'text-tawf-green' : 'text-tawf-ink/70 hover:text-tawf-green'}`}>
+              <Link to="/identity" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/identity' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
                 Identity
               </Link>
-              <Link to="/notarization" className={`text-sm font-medium tracking-widest uppercase transition-colors ${pathname === '/notarization' ? 'text-tawf-green' : 'text-tawf-ink/70 hover:text-tawf-green'}`}>
+              <Link to="/notarization" className={`inline-flex min-h-11 items-center text-[15px] font-medium transition-colors ${pathname === '/notarization' ? 'text-[#1F6B54]' : 'text-[#4A5F57] hover:text-[#10261F]'}`}>
                 Notarization
               </Link>
               <Link
                 to="/integration"
-                className="flex items-center gap-2 border border-tawf-green text-tawf-green px-6 py-2.5 rounded-full text-sm font-medium tracking-widest uppercase hover:bg-tawf-green hover:text-tawf-sand transition-all duration-300"
+                className="inline-flex h-12 items-center rounded-xl bg-[#1F6B54] px-6 text-[15px] font-medium text-white transition-colors hover:bg-[#175545] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1F6B54] focus-visible:ring-offset-2"
               >
                 Get Started
               </Link>
             </div>
 
             <button
-              className="lg:hidden p-3 text-tawf-green min-h-[48px] min-w-[48px] flex items-center justify-center"
+              className="lg:hidden p-3 text-[#10261F] min-h-[48px] min-w-[48px] flex items-center justify-center"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -52,12 +52,12 @@ export default function App() {
           </div>
 
           {mobileMenuOpen && (
-            <div className="lg:hidden border-t border-tawf-green/10 bg-white">
+            <div className="lg:hidden border-t border-[#CED8D1] bg-[#FBFCFA]">
               <div className="px-6 py-4 space-y-4">
-                <Link to="/" className="block text-sm font-medium tracking-widest uppercase text-tawf-ink/70 hover:text-tawf-green">Overview</Link>
-                <Link to="/identity" className="block text-sm font-medium tracking-widest uppercase text-tawf-ink/70 hover:text-tawf-green">Identity</Link>
-                <Link to="/notarization" className="block text-sm font-medium tracking-widest uppercase text-tawf-ink/70 hover:text-tawf-green">Notarization</Link>
-                <Link to="/integration" className="block text-sm font-medium tracking-widest uppercase text-tawf-green border border-tawf-green px-6 py-2.5 rounded-full text-center">
+                <Link to="/" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Overview</Link>
+                <Link to="/identity" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Identity</Link>
+                <Link to="/notarization" className="flex min-h-11 items-center text-[15px] font-medium text-[#4A5F57] hover:text-[#10261F]">Notarization</Link>
+                <Link to="/integration" className="flex h-12 items-center justify-center rounded-xl bg-[#1F6B54] text-[15px] font-medium text-white">
                   Get Started
                 </Link>
               </div>
@@ -75,7 +75,7 @@ export default function App() {
         </Routes>
       </main>
 
-      <footer className="bg-tawf-ink text-white/60 py-16 border-t border-white/10" role="contentinfo">
+      <footer className="bg-[#10261F] text-white/70 py-16 border-t border-white/10" role="contentinfo">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
             <img src="/images/tawftransparent.png" alt="Tawf" className="-ml-3 h-24 w-auto mb-2" />
@@ -86,21 +86,21 @@ export default function App() {
           </div>
 
           <div>
-            <h4 className="text-white font-medium tracking-widest uppercase text-xs mb-6">SDK</h4>
+            <h4 className="font-sans text-white font-medium text-sm mb-6">SDK</h4>
             <ul className="space-y-4 text-sm">
-              <li><Link to="/identity" className="hover:text-tawf-gold transition-colors">Identity (Tawf ID)</Link></li>
-              <li><Link to="/notarization" className="hover:text-tawf-gold transition-colors">Notarization (tawf-verify)</Link></li>
-              <li><Link to="/integration" className="hover:text-tawf-gold transition-colors">Getting Started</Link></li>
-              <li><a href="https://github.com/tawf-labs/tawf-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-tawf-gold transition-colors">GitHub</a></li>
+              <li><Link to="/identity" className="hover:text-[#F2E3B5] transition-colors">Identity (Tawf ID)</Link></li>
+              <li><Link to="/notarization" className="hover:text-[#F2E3B5] transition-colors">Notarization (tawf-verify)</Link></li>
+              <li><Link to="/integration" className="hover:text-[#F2E3B5] transition-colors">Getting Started</Link></li>
+              <li><a href="https://github.com/tawf-labs/tawf-sdk" target="_blank" rel="noopener noreferrer" className="hover:text-[#F2E3B5] transition-colors">GitHub</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-medium tracking-widest uppercase text-xs mb-6">Tawf Ecosystem</h4>
+            <h4 className="font-sans text-white font-medium text-sm mb-6">Tawf Ecosystem</h4>
             <ul className="space-y-4 text-sm">
-              <li><a href="https://tawf.foundation" className="hover:text-tawf-gold transition-colors">Foundation</a></li>
-              <li><a href="https://waqf.tawf.foundation" className="hover:text-tawf-gold transition-colors">Cash Waqf</a></li>
-              <li><a href="https://github.com/tawf-labs/tawf-gov" className="hover:text-tawf-gold transition-colors">Governance</a></li>
+              <li><a href="https://tawf.foundation" className="hover:text-[#F2E3B5] transition-colors">Foundation</a></li>
+              <li><a href="https://waqf.tawf.foundation" className="hover:text-[#F2E3B5] transition-colors">Cash Waqf</a></li>
+              <li><a href="https://github.com/tawf-labs/tawf-gov" className="hover:text-[#F2E3B5] transition-colors">Governance</a></li>
             </ul>
           </div>
         </div>
