@@ -86,12 +86,12 @@ pre, code {
 /* Landing scope: palette and heading type apply only inside [data-landing]. */
 [data-landing] {
   --l-ink: #10261F;
-  --l-muted: #4A5F57;
+  --l-muted: #33473F;
   --l-stone: #EEF1EC;
   --l-paper: #FBFCFA;
-  --l-glaze: #DCE8E1;
+  --l-glaze: #D3E2DA;
   --l-mint: #D3ECDD;
-  --l-line: #CED8D1;
+  --l-line: #AEBFB5;
   --l-accent: #1F6B54;
   --l-hover: #175545;
   --l-honey: #8A6414;

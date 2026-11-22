@@ -15,7 +15,7 @@ const bgStyles = {
 };
 
 const textStyles = {
-  sand: { title: 'text-tawf-green', badge: 'text-tawf-gold', subtitle: 'text-tawf-ink' },
+  sand: { title: 'text-tawf-green', badge: 'text-[#8A6414]', subtitle: 'text-tawf-ink' },
   ink: { title: 'text-white', badge: 'text-tawf-gold', subtitle: 'text-tawf-sand' },
   green: { title: 'text-white', badge: 'text-tawf-gold', subtitle: 'text-tawf-sand' },
 };
