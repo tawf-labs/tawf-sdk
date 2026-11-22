@@ -27,7 +27,7 @@ export default function HeroSection() {
               Build on <DrawnUnderline>Tawf</DrawnUnderline>
             </motion.h1>
             <motion.p {...rise(0.2)} className="mt-5 max-w-[34em] text-[clamp(16px,1.4vw,18.5px)] leading-[1.6] text-[var(--l-muted)] max-md:mx-auto">
-              TypeScript SDKs and smart contracts for the Tawf Islamic Foundation ecosystem. Soulbound identity and cryptographic notarization, published as composable @tawf packages on Ethereum.
+              TypeScript SDKs and smart contracts for the Tawf Islamic Foundation ecosystem. Soulbound identity and cryptographic notarization, built as composable @tawf packages on Ethereum.
             </motion.p>
             <motion.div {...rise(0.3)} className="mt-8 flex flex-wrap items-center justify-center gap-3.5 md:justify-start">
               <Magnetic>

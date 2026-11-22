@@ -7,8 +7,9 @@ import CodeBlock from '../components/CodeBlock';
 const STEPS = [
   {
     title: 'Install the packages',
-    body: 'Add the @tawf packages your app needs. Everything is published under the @tawf npm scope.',
-    code: `pnpm add @tawf/types @tawf/wallet-sdk`,
+    body: 'Add the @tawf packages your app needs. They use the @tawf npm scope and are not on npm yet.',
+    code: `# not on npm yet
+pnpm add @tawf/types @tawf/wallet-sdk`,
   },
   {
     title: 'Choose a chain',
